@@ -67,159 +67,38 @@ if "DEVEL" in os.environ:
 else:
     BASE_PATH = "/usr/share/cover-thumbnailer/"
 
-#Cover files list
-COVER_FILES = ["cover.png", "cover.jpg", ".cover.png", ".cover.jpg",
-        "Cover.png", "Cover.jpg", ".Cover.png", ".Cover.jpg",
-        "folder.png", "folder.jpg", ".folder.png", ".folder.jpg",
-        "Folder.png", "Folder.jpg", ".Folder.png", ".Folder.jpg"]
-
 #Supported picture ext (ALWAY LAST 4 CHARS !!)
-PICTURES_EXT = [".jpg", ".JPG", "jpeg", "JPEG",
-        ".png", ".PNG", #Not interlaced
-        ".gif", ".GIF",
-        ".bmp", ".BMP", #Window ans OS/2 bitmap
-        ".ico", ".ICO", #Windows icon format
-        ".tga", ".TGA", #Truevision Targa format
-        ".tif", ".TIF", "tiff", "TIFF", #Adobe Tagged Image File Format
-        ".psd", ".PSD", #Adobe Photosop format (only version 2.5 and 3.0)
-        ]
+PICTURES_EXT = [
+    ".jpg",  ".JPG", 
+    ".jpeg", ".JPEG",
+    ".png",  ".PNG", #Not interlaced
+    ".gif",  ".GIF",
+    ".bmp",  ".BMP", #Window ans OS/2 bitmap
+    ".ico",  ".ICO", #Windows icon format
+    ".tga",  ".TGA", #Truevision Targa format
+    ".tif",  ".TIF", 
+    ".tiff", ".TIFF", #Adobe Tagged Image File Format
+    ".psd",  ".PSD", #Adobe Photosop format (only version 2.5 and 3.0)
+]
+
+MUSIC_EXT = [
+    ".mp3", ".flac"
+]
+
+MUSIC_FG = os.path.join(BASE_PATH, "music_fg.png")
+MUSIC_BG = os.path.join(BASE_PATH, "music_bg.png")
+
+PICTURES_FG = os.path.join(BASE_PATH, "pictures_fg.png")
+PICTURES_BG = os.path.join(BASE_PATH, "pictures_bg.png")
 
 #==============================================================================
 
-
-class Conf(dict):
-
-    """ Import configuration.
-
-    Import configuration from the GNOME and cover thumbnailer files
-    """
-
-    def __init__(self):
-        """ The constructor
-
-        Set the default values
-        """
-        #Initialize the dictionary
-        dict.__init__(self)
-        #Music
-        self['music_enabled'] = True
-        self['music_keepdefaulticon'] = False
-        self['music_usegnomefolder'] = True
-        self['music_cropimg'] = True
-        self['music_makemosaic'] = False
-        self['music_paths'] = []
-        self['music_defaultimg'] = os.path.join(BASE_PATH, "music_default.png")
-        self['music_fg'] = os.path.join(BASE_PATH, "music_fg.png")
-        self['music_bg'] = os.path.join(BASE_PATH, "music_bg.png")
-        #Pictures
-        self['pictures_enabled'] = True
-        self['pictures_keepdefaulticon'] = False
-        self['pictures_usegnomefolder'] = True
-        self['pictures_maxthumbs'] = 3
-        self['pictures_paths'] = []
-        self['pictures_fg'] = os.path.join(BASE_PATH, "pictures_fg.png")
-        self['pictures_bg'] = os.path.join(BASE_PATH, "pictures_bg.png")
-        #Other
-        self['other_enabled'] = True
-        self['other_fg'] = os.path.join(BASE_PATH, 'other_fg.png')
-        #Ignored
-        self['ignored_dotted'] = False
-        self['ignored_paths'] = []
-        #Never ignored
-        self['neverignored_paths'] = []
-        #Global
-        self.user_homedir = os.environ.get("HOME")
-        self.user_gnomeconf = os.path.join(
-                self.user_homedir,
-                ".config/user-dirs.dirs"
-                )
-        self.user_conf = os.path.join(
-                self.user_homedir,
-                ".cover-thumbnailer/cover-thumbnailer.conf"
-                )
-        #Read configuration
-        self.import_user_conf()
-        self.import_gnome_conf()
-
-    def import_gnome_conf(self):
-        """ Import user folders from GNOME configuration file. """
-        if os.path.isfile(self.user_gnomeconf):
-            gnome_conf_file = open(self.user_gnomeconf, 'r')
-            for line in gnome_conf_file:
-                if re.match(r'.*?XDG_MUSIC_DIR.*?=.*?"(.*)".*?', line) and self['music_usegnomefolder']:
-                    match = re.match(r'.*?XDG_MUSIC_DIR.*?=.*?"(.*)".*?', line)
-                    path = match.group(1).replace('$HOME', self.user_homedir)
-                    #If path == user home dir, don't use it, it's probably a misconfiguration !
-                    if os.path.isdir(path) and not os.path.samefile(path, self.user_homedir):
-                        self['music_paths'].append(path)
-                elif re.match(r'.*?XDG_PICTURES_DIR.*?=.*?"(.*)".*?', line) and self['pictures_usegnomefolder']:
-                    match = re.match(r'.*?XDG_PICTURES_DIR.*?=.*?"(.*)".*?', line)
-                    path = match.group(1).replace('$HOME', self.user_homedir)
-                    #If path == user home dir, don't use it, it's probably a misconfiguration !
-                    if os.path.isdir(path) and not os.path.samefile(path, self.user_homedir):
-                        self['pictures_paths'].append(path)
-            gnome_conf_file.close()
-        else:
-            print("W: [%s:Conf.import_gnome_conf] Can't find `user-dirs.dirs' file." % __file__)
-
-    def import_user_conf(self):
-        """ Import user configuration file. """
-        if os.path.isfile(self.user_conf):
-            current_section = "unknown"
-            user_conf_file = open(self.user_conf, "r")
-            for line in user_conf_file:
-                #Comments
-                if re.match(r"\s*#.*", line):
-                    continue
-                #Section
-                elif re.match(r"\s*\[([a-z]+)\]\s*", line.lower()):
-                    match = re.match(r'\s*\[([a-z]+)\]\s*', line.lower())
-                    current_section = match.group(1)
-                #Boolean key
-                elif re.match(r"\s*([a-z]+)\s*=\s*(yes|no|true|false)\s*", line.lower()):
-                    match = re.match(r"\s*([a-z]+)\s*=\s*(yes|no|true|false)\s*", line.lower())
-                    key = match.group(1)
-                    value = match.group(2)
-                    if value in ("yes", "true"):
-                        value = True
-                    else:
-                        value = False
-                    self[current_section + "_" + key] = value
-                #String key : path
-                elif re.match(r"\s*(path|PATH|Path)\s*=\s*\"(.+)\"\s*", line):
-                    match = re.match(r"\s*(path|PATH|Path)\s*=\s*\"(.+)\"\s*", line)
-                    key = "paths"
-                    value = match.group(2)
-                    self[current_section + "_" + key].append(value)
-                #Integer key
-                elif re.match(r"\s*([a-z]+)\s*=\s*([0-9]+)\s*", line.lower()):
-                    match = re.match(r"\s*([a-z]+)\s*=\s*([0-9]+)\s*", line.lower())
-                    key = match.group(1)
-                    value = match.group(2)
-                    self[current_section + "_" + key] = int(value)
-
-            user_conf_file.close()
-
-            #Replace "~/" by the user home dir
-            for path_list in (self['music_paths'], self['pictures_paths'], self['ignored_paths']):
-                for i in range(0, len(path_list)):
-                    if path_list[i][0] == "~":
-                        path_list[i] = os.path.join(self.user_homedir, path_list[i][2:])
-
-            #Import "useGnomeConf" key (for compatibility)
-            if "miscellaneous_usegnomeconf" in self:
-                self["music_usegnomefolder"] = self["miscellaneous_usegnomeconf"]
-                self["pictures_usegnomefolder"] = self["miscellaneous_usegnomeconf"]
-
-
 class Thumb(object):
-    """ Makes thumbnails.
-
+    """
     Generate thumbnails for all kind of folders
     """
-    def __init__(self, img_paths):
-        """The constructor.
-
+    def __init__(self, img_paths: list[str]):
+        """
         Argument:
           * img_paths -- a list of picture path
         """
@@ -537,23 +416,6 @@ class Thumb(object):
             print("E: [%s:Thumb.save_thumb] No thumbnail created" % __file__)
 
 
-def search_cover(path):
-    """ Search for a cover file.
-
-    Search for files like cover.png, .folder.jpg,... in the folder and return
-    its name as a list of on item (or an empty list if no pictures were found)
-
-    Argument:
-      * path -- the path of the folder
-    """
-    cover_path = []
-    for cover in COVER_FILES:
-        if os.path.isfile(os.path.join(path, cover)):
-            cover_path.append(os.path.join(path, cover))
-            break
-    return cover_path
-
-
 def search_pictures(path):
     """ Search for pictures in the folder
 
@@ -565,11 +427,15 @@ def search_pictures(path):
     """
     files = os.listdir(path)
     pictures = []
-    for file_ in files:
-        if file_[-4:] in PICTURES_EXT:
-            pictures.append(os.path.join(path, file_))
-        if len(pictures) >= 4: #4 pictures max... don't need more
+
+    for f in files:
+        _, ext = os.path.splitext(f)
+        if ext in PICTURES_EXT:
+            pictures.append(os.path.join(path, f))
+
+        if len(pictures) >= 4:
             break
+
     return pictures
 
 
@@ -584,7 +450,7 @@ def search_pictures_recursiv(path):
     """
     pictures = []
     for root, dirs, files in os.walk(path):
-        if len(pictures) <= 4: #4 pictures max... don't need more
+        if len(pictures) <= 4:
             for file_ in files:
                 if file_[-4:] in PICTURES_EXT:
                     pictures.append(os.path.join(path, root, file_))
@@ -624,95 +490,72 @@ def gvfs_uri_to_path(uri):
     """
     if not re.match(r"^[a-zA-Z0-9_-]+://", uri):
         return uri
+
     gvfs = Gio.Vfs.get_default()
     return gvfs.get_file_for_uri(uri).get_path()
 
 
+def has_more_music(folder: str) -> bool:
+    music = 0
+    pictures = 0
+    
+    for f in os.listdir(folder):
+        _, ext = os.path.splitext(f)
+
+        if ext in MUSIC_EXT:
+            music += 1
+        elif ext in PICTURES_EXT:
+            pictures += 1
+
+    return music > pictures
+
 if __name__ == "__main__":
-    #If we have 2 args
-    if len(sys.argv) == 3:
-        INPUT_FOLDER = gvfs_uri_to_path(sys.argv[1])
-        OUTPUT_FILE = gvfs_uri_to_path(sys.argv[2])
-    else:
-        #Display informations and usage
+    if len(sys.argv) < 2 or len(sys.argv) > 3:
         print("Cover thumbnailer - %s" % __doc__)
         print("Version: %s" % __version__)
         print(__copyright__)
         sys.exit(1)
 
+    input_folder = gvfs_uri_to_path(sys.argv[1])
+
+    if len(sys.argv) == 3:
+        output_file = gvfs_uri_to_path(sys.argv[2])
+
+    elif len(sys.argv) == 2:
+        output_file = "./out.png"
+
     #If input path does not exists
-    if not os.path.isdir(INPUT_FOLDER):
-        print("E: [%s:__main__] '%s' is not a directory" % (__file__, INPUT_FOLDER))
+    if not os.path.isdir(input_folder):
+        print("E: [%s:__main__] '%s' is not a directory" % (__file__, input_folder))
         sys.exit(2)
 
-    #Load configuration
-    CONF = Conf()
+    # Determine the type of folder we get. Is it music folder, pictures?
+    is_music_folder = has_more_music(input_folder)
 
-    #Ignored folders
-    if match_path(INPUT_FOLDER, CONF['ignored_paths']) \
-    and not match_path(INPUT_FOLDER, CONF['neverignored_paths']):
-        sys.exit(0)
+    # Music folders
+    if is_music_folder:
+        covers = search_pictures(input_folder)
 
-    #Folders whose name starts with a dot
-    elif CONF['ignored_dotted'] and re.match(r".*/\..*", INPUT_FOLDER):
-        sys.exit(0)
-
-    #Music folders
-    elif CONF['music_enabled'] and match_path(INPUT_FOLDER, CONF['music_paths']):
-        covers = search_cover(INPUT_FOLDER)
         if len(covers) == 0:
-            covers = search_pictures(INPUT_FOLDER)
-            if len(covers) == 0:
-                covers = search_pictures_recursiv(INPUT_FOLDER)
-                if len(covers) == 0 and not CONF['music_keepdefaulticon']:
-                    covers = [CONF['music_defaultimg']]
-        if len(covers) > 0:
-            if len(covers) == 1 or not CONF['music_makemosaic']:
-                thumbnail = Thumb([covers[0], CONF['music_defaultimg']])
-                thumbnail.music_thumbnail(
-                        CONF['music_bg'],
-                        CONF['music_fg'],
-                        CONF['music_cropimg']
-                        )
-                thumbnail.save_thumb(OUTPUT_FILE, "PNG")
-            else:
-                thumbnail = Thumb(covers)
-                thumbnail.music_thumbnail_mosaic(
-                        CONF['music_bg'],
-                        CONF['music_fg'],
-                        CONF['music_cropimg']
-                        )
-                thumbnail.save_thumb(OUTPUT_FILE, "PNG")
-        elif not CONF['music_keepdefaulticon']:
-            thumbnail = Thumb([CONF['music_defaultimg']])
-            thumbnail.music_thumbnail(
-                    CONF['music_bg'],
-                    CONF['music_fg'],
-                    CONF['music_cropimg']
-                    )
-            thumbnail.save_thumb(OUTPUT_FILE, "PNG")
-
-    #Picture folders
-    elif CONF['pictures_enabled'] and match_path(INPUT_FOLDER, CONF['pictures_paths']):
-        picture_list = search_cover(INPUT_FOLDER)
-        if len(picture_list) == 0:
-            picture_list = search_pictures(INPUT_FOLDER)
-            if len(picture_list) == 0:
-                picture_list = search_pictures_recursiv(INPUT_FOLDER)
-        thumbnail = Thumb(picture_list)
-        thumbnail.pictures_thumbnail(
-                CONF['pictures_bg'],
-                CONF['pictures_fg'],
-                CONF['pictures_maxthumbs']
-                )
-        thumbnail.save_thumb(OUTPUT_FILE, "PNG")
-
-    #Other folders
-    elif CONF['other_enabled']:
-        covers = search_cover(INPUT_FOLDER)
-        if len(covers) == 1:
+            covers = search_pictures_recursiv(input_folder)
+                
+        elif len(covers) > 0:
             thumbnail = Thumb(covers)
-            thumbnail.other_thumbnail(CONF['other_fg'])
-            thumbnail.save_thumb(OUTPUT_FILE, "PNG")
 
+            if len(covers) == 1:
+                thumbnail.music_thumbnail(MUSIC_BG, MUSIC_FG)
+            else:
+                thumbnail.music_thumbnail_mosaic(MUSIC_BG, MUSIC_FG)
 
+            thumbnail.save_thumb(output_file, "PNG")
+            
+    else:
+        # Picture folders
+        picture_list = search_pictures(input_folder)
+
+        if len(picture_list) == 0:
+            picture_list = search_pictures_recursiv(input_folder)
+
+        thumbnail = Thumb(picture_list)
+        thumbnail.pictures_thumbnail(PICTURES_BG, PICTURES_FG)
+        thumbnail.save_thumb(output_file, "PNG")
