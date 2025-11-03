@@ -81,7 +81,8 @@ PICTURES_EXT = [
 ]
 
 MUSIC_EXT = [
-    ".mp3", ".flac"
+    ".mp3", ".flac",
+    ".m4a"
 ]
 
 MUSIC_FG = os.path.join(BASE_PATH, "music_fg.png")
@@ -494,17 +495,18 @@ def gvfs_uri_to_path(uri):
     return gvfs.get_file_for_uri(uri).get_path()
 
 
-def has_more_music(folder: str) -> bool:
+def has_more_music(root: str) -> bool:
     music = 0
     pictures = 0
     
-    for f in os.listdir(folder):
-        _, ext = os.path.splitext(f)
+    for _, _, files in os.walk(root):
+        for f in files:
+            _, ext = os.path.splitext(f)
 
-        if ext in MUSIC_EXT:
-            music += 1
-        elif ext in PICTURES_EXT:
-            pictures += 1
+            if ext in MUSIC_EXT:
+                music += 1
+            elif ext in PICTURES_EXT:
+                pictures += 1
 
     return music > pictures
 
@@ -540,12 +542,7 @@ if __name__ == "__main__":
                 
         elif len(covers) > 0:
             thumbnail = Thumb(covers)
-
-            if len(covers) == 1:
-                thumbnail.music_thumbnail(MUSIC_BG, MUSIC_FG)
-            else:
-                thumbnail.music_thumbnail_mosaic(MUSIC_BG, MUSIC_FG)
-
+            thumbnail.music_thumbnail(MUSIC_BG, MUSIC_FG)
             thumbnail.save_thumb(output_file, "PNG")
             
     else:
