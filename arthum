@@ -65,9 +65,8 @@ except:
 if "DEVEL" in os.environ:
     BASE_PATH = "./share/" #For devel
 else:
-    BASE_PATH = "/usr/share/cover-thumbnailer/"
+    BASE_PATH = os.path.expanduser("~/.local/share/arthum")
 
-#Supported picture ext (ALWAY LAST 4 CHARS !!)
 PICTURES_EXT = [
     ".jpg",  ".JPG", 
     ".jpeg", ".JPEG",

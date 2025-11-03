@@ -2,9 +2,14 @@
 
 Just a script to take in a folder, return a thumbnail for it. Doesn't set anything.
 
+## Little installation
+```
+$ cp -r share ~/.local/share/arthum
+```
+
 ## Usage
 ```
-./arthum <Input folder> <Optional, output file>
+$ ./arthum <Input folder> <Optional, output file>
 ```
 
 ![Screenshot: Nautilus Music folder](./screenshots/screenshot_nautilus_music_folder.png)
